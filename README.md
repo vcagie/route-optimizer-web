@@ -9,11 +9,15 @@ A portfolio demo for route optimization: add stops, see them on a map, and optim
 
 ## Features
 
-- Add locations by address search
-- Drag to reorder stops manually in the list
+- Add stops by address search, or load a sample route in one click
+- Drag to reorder stops, choose the starting stop, and (one-way) pin the final stop
 - Toggle one-way vs round-trip
-- "Optimize Route" sends the current stops + mode to your backend and draws the optimized path
-- Auto-saves your location list to `localStorage` across refreshes
+- "Optimize Route" returns the fastest visiting order, labelled **Proven optimal** when the backend solved it exactly
+- Shows the time and distance saved compared with your original order, with both routes drawn on the map
+- Drive time and distance for every leg
+- Open the route in Google Maps, or copy a share link that restores the stops for anyone who opens it
+- Auto-saves your stops to `localStorage` across refreshes
+- Responsive layout: on phones the map sits above the controls
 
 ## Getting started
 
@@ -40,11 +44,16 @@ The frontend `POST`s to `{VITE_API_BASE_URL}/optimize` with:
 ```json
 {
   "locations": [{ "id": "loc-1", "lat": 40.7128, "lng": -74.006 }],
-  "mode": "round-trip"
+  "mode": "one-way",
+  "end_id": "loc-4"
 }
 ```
 
-and expects back an `order` (array of location ids in optimized visiting order) plus a distance field — either `totalDistanceMeters` or `total_distance_km`, both are supported.
+The first location is the start. `end_id` is optional and only applies to one-way routes.
+
+The response contains the optimized `order` (location ids), `total_distance_m`, `total_duration_s`,
+`optimal` (true when the order is proven optimal), per-leg `legs`, and a `baseline` with the totals for
+the original order. Older backends that only return `total_distance_km` / `total_duration_min` still work.
 
 ## Build
 

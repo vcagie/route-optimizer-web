@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { MAX_STOPS } from "../config";
 import { useGeocode } from "../hooks/useGeocode";
+import { createLocationId } from "../state/persistence";
 import { useRouteContext } from "../state/RouteContext";
 import type { GeocodeResult } from "../types";
 
@@ -7,13 +9,14 @@ export function LocationSearch() {
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const { results, isLoading, error } = useGeocode(query);
-  const { dispatch } = useRouteContext();
+  const { state, dispatch } = useRouteContext();
+  const isFull = state.locations.length >= MAX_STOPS;
 
   function handleSelect(result: GeocodeResult) {
     dispatch({
       type: "ADD_LOCATION",
       payload: {
-        id: `loc-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        id: createLocationId(),
         label: result.label,
         lat: result.lat,
         lng: result.lng,
@@ -32,7 +35,8 @@ export function LocationSearch() {
         id="location-search-input"
         type="text"
         className="text-input"
-        placeholder="Search for an address..."
+        placeholder={isFull ? `Maximum of ${MAX_STOPS} stops reached` : "Search for an address..."}
+        disabled={isFull}
         value={query}
         onChange={(event) => {
           setQuery(event.target.value);
