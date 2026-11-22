@@ -3,8 +3,10 @@ import { MapView } from "./components/MapView";
 import { LocationSearch } from "./components/LocationSearch";
 import { LocationList } from "./components/LocationList";
 import { ModeToggle } from "./components/ModeToggle";
+import { StopEndpoints } from "./components/StopEndpoints";
 import { OptimizeButton } from "./components/OptimizeButton";
 import { RouteSummary } from "./components/RouteSummary";
+import { RouteActions } from "./components/RouteActions";
 
 function App() {
   return (
@@ -19,8 +21,10 @@ function App() {
           <LocationSearch />
           <LocationList />
           <ModeToggle />
+          <StopEndpoints />
           <OptimizeButton />
           <RouteSummary />
+          <RouteActions />
         </aside>
         <main className="map-pane">
           <MapView />

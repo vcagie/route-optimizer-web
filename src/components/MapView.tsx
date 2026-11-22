@@ -3,12 +3,15 @@ import { MapContainer, TileLayer, Marker, Polyline, Tooltip, useMap } from "reac
 import L from "leaflet";
 import { useRouteContext } from "../state/RouteContext";
 import { useRoutePath } from "../hooks/useRoutePath";
-import type { LocationPoint } from "../types";
+import type { LocationPoint, RouteMode } from "../types";
 
-function createNumberedIcon(index: number, isOptimized: boolean) {
+type MarkerRole = "start" | "end" | null;
+
+function createNumberedIcon(index: number, isOptimized: boolean, role: MarkerRole) {
+  const classes = ["location-marker", isOptimized ? "location-marker--optimized" : "", role ? `location-marker--${role}` : ""];
   return L.divIcon({
     className: "location-marker-icon",
-    html: `<div class="location-marker ${isOptimized ? "location-marker--optimized" : ""}">${index + 1}</div>`,
+    html: `<div class="${classes.filter(Boolean).join(" ")}">${index + 1}</div>`,
     iconSize: [28, 28],
     iconAnchor: [14, 14],
   });
@@ -74,71 +77,102 @@ function FitBounds({ locations }: { locations: LocationPoint[] }) {
   return null;
 }
 
+function toPositions(stops: LocationPoint[], mode: RouteMode): [number, number][] {
+  const positions = stops.map((loc) => [loc.lat, loc.lng] as [number, number]);
+  if (mode === "round-trip" && positions.length > 1) {
+    positions.push(positions[0]);
+  }
+  return positions;
+}
+
 const DEFAULT_CENTER: [number, number] = [40.7128, -74.006];
 const DRAFT_COLOR = "#475569";
+const ORIGINAL_COLOR = "#ea580c";
 const OPTIMIZED_COLOR = "#1d4ed8";
 
 export function MapView() {
   const { state } = useRouteContext();
-  const { locations, optimized, mode } = state;
+  const { locations, optimized, previousOrder, mode, endId } = state;
 
-  const optimizedPositions = useMemo<[number, number][]>(() => {
-    if (!optimized) return [];
+  const optimizedPositions = useMemo<[number, number][]>(
+    () => (optimized ? toPositions(locations, mode) : []),
+    [optimized, locations, mode]
+  );
+
+  // Before optimizing, this is the route in the current list order. Afterwards it
+  // is the user's original order, drawn faded underneath for comparison.
+  const comparisonPositions = useMemo<[number, number][]>(() => {
+    if (!optimized || !previousOrder) return toPositions(locations, mode);
     const byId = new Map(locations.map((loc) => [loc.id, loc]));
-    const ordered = optimized.order
-      .map((id) => byId.get(id))
-      .filter((loc): loc is LocationPoint => Boolean(loc));
-    const positions = ordered.map((loc) => [loc.lat, loc.lng] as [number, number]);
-    if (mode === "round-trip" && positions.length > 1) {
-      positions.push(positions[0]);
-    }
-    return positions;
-  }, [optimized, locations, mode]);
+    const original = previousOrder.map((id) => byId.get(id)).filter((loc): loc is LocationPoint => Boolean(loc));
+    return toPositions(original, mode);
+  }, [optimized, previousOrder, locations, mode]);
 
-  const draftPositions = useMemo<[number, number][]>(() => {
-    if (optimized) return [];
-    const positions = locations.map((loc) => [loc.lat, loc.lng] as [number, number]);
-    if (mode === "round-trip" && positions.length > 1) {
-      positions.push(positions[0]);
-    }
-    return positions;
-  }, [optimized, locations, mode]);
-
-  const draftRoutePath = useRoutePath(draftPositions);
+  const comparisonRoutePath = useRoutePath(comparisonPositions);
   const optimizedRoutePath = useRoutePath(optimizedPositions);
 
-  const draftLine = draftRoutePath ?? draftPositions;
+  const comparisonLine = comparisonRoutePath ?? comparisonPositions;
   const optimizedLine = optimizedRoutePath ?? optimizedPositions;
+  const isOptimized = optimizedPositions.length > 1;
+
+  function roleFor(loc: LocationPoint, index: number): MarkerRole {
+    if (index === 0) return "start";
+    if (mode === "one-way" && (loc.id === endId || (isOptimized && index === locations.length - 1))) return "end";
+    return null;
+  }
 
   return (
-    <MapContainer center={DEFAULT_CENTER} zoom={12} className="map-view">
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
-      <FitBounds locations={locations} />
-      {locations.map((loc, index) => (
-        <Marker key={loc.id} position={[loc.lat, loc.lng]} icon={createNumberedIcon(index, Boolean(optimized))}>
-          <Tooltip>{loc.label}</Tooltip>
-        </Marker>
-      ))}
-      {draftPositions.length > 1 && (
-        <>
-          <Polyline positions={draftLine} pathOptions={{ color: "#ffffff", weight: 7, opacity: 0.9 }} />
-          <Polyline
-            positions={draftLine}
-            pathOptions={{ color: DRAFT_COLOR, weight: 4, opacity: 0.95, dashArray: "10 8" }}
-          />
-          <RouteArrows path={draftLine} color={DRAFT_COLOR} />
-        </>
+    <>
+      <MapContainer center={DEFAULT_CENTER} zoom={12} className="map-view">
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        <FitBounds locations={locations} />
+        {comparisonPositions.length > 1 &&
+          (isOptimized ? (
+            <Polyline
+              positions={comparisonLine}
+              pathOptions={{ color: ORIGINAL_COLOR, weight: 3, opacity: 0.75, dashArray: "6 8" }}
+            />
+          ) : (
+            <>
+              <Polyline positions={comparisonLine} pathOptions={{ color: "#ffffff", weight: 7, opacity: 0.9 }} />
+              <Polyline
+                positions={comparisonLine}
+                pathOptions={{ color: DRAFT_COLOR, weight: 4, opacity: 0.95, dashArray: "10 8" }}
+              />
+              <RouteArrows path={comparisonLine} color={DRAFT_COLOR} />
+            </>
+          ))}
+        {isOptimized && (
+          <>
+            <Polyline positions={optimizedLine} pathOptions={{ color: "#ffffff", weight: 8, opacity: 0.9 }} />
+            <Polyline positions={optimizedLine} pathOptions={{ color: OPTIMIZED_COLOR, weight: 5, opacity: 0.95 }} />
+            <RouteArrows path={optimizedLine} color={OPTIMIZED_COLOR} />
+          </>
+        )}
+        {locations.map((loc, index) => (
+          <Marker
+            key={loc.id}
+            position={[loc.lat, loc.lng]}
+            icon={createNumberedIcon(index, isOptimized, roleFor(loc, index))}
+            zIndexOffset={1000}
+          >
+            <Tooltip>{loc.label}</Tooltip>
+          </Marker>
+        ))}
+      </MapContainer>
+      {isOptimized && (
+        <div className="map-legend" aria-hidden="true">
+          <span className="map-legend__item">
+            <span className="map-legend__swatch map-legend__swatch--optimized" /> Optimized route
+          </span>
+          <span className="map-legend__item">
+            <span className="map-legend__swatch map-legend__swatch--original" /> Your original order
+          </span>
+        </div>
       )}
-      {optimizedPositions.length > 1 && (
-        <>
-          <Polyline positions={optimizedLine} pathOptions={{ color: "#ffffff", weight: 8, opacity: 0.9 }} />
-          <Polyline positions={optimizedLine} pathOptions={{ color: OPTIMIZED_COLOR, weight: 5, opacity: 0.95 }} />
-          <RouteArrows path={optimizedLine} color={OPTIMIZED_COLOR} />
-        </>
-      )}
-    </MapContainer>
+    </>
   );
 }

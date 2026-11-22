@@ -9,6 +9,10 @@
   --color-primary-bg: #eff4ff;
   --color-danger: #dc2626;
   --color-danger-bg: #fef2f2;
+  --color-success: #15803d;
+  --color-success-bg: #ecfdf3;
+  --color-start: #16a34a;
+  --color-end: #dc2626;
   --radius-sm: 6px;
   --radius-md: 10px;
   --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
@@ -50,6 +54,11 @@ body {
   overflow-y: auto;
 }
 
+/* Let the sidebar scroll instead of squashing its sections when the list grows. */
+.sidebar > * {
+  flex-shrink: 0;
+}
+
 .sidebar__header h1 {
   font-size: 22px;
   margin: 0 0 6px;
@@ -84,6 +93,15 @@ body {
   color: var(--color-text);
   outline: none;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.text-input:disabled {
+  background: var(--color-bg);
+  cursor: not-allowed;
+}
+
+select.text-input {
+  cursor: pointer;
 }
 
 .text-input:focus {
@@ -150,14 +168,46 @@ body {
 }
 
 .location-list__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 16px;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.location-list__empty p {
   font-size: 13px;
   color: var(--color-text-muted);
   margin: 0;
+  line-height: 1.5;
+}
+
+.location-list__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.link-button {
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.link-button:hover {
+  color: var(--color-danger);
 }
 
 .location-list__item {
   display: flex;
   align-items: center;
+  min-width: 0;
   gap: 10px;
   padding: 8px 10px;
   border: 1px solid var(--color-border);
@@ -198,6 +248,54 @@ body {
   justify-content: center;
 }
 
+.location-list__badge--start {
+  background: var(--color-start);
+}
+
+.location-list__badge--end {
+  background: var(--color-end);
+}
+
+.location-list__content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.location-list__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.location-list__tag {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+.location-list__tag--start {
+  color: var(--color-start);
+  background: var(--color-success-bg);
+}
+
+.location-list__tag--end {
+  color: var(--color-end);
+  background: var(--color-danger-bg);
+}
+
+.location-list__leg {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
 .location-list__moved {
   flex-shrink: 0;
   font-size: 10px;
@@ -213,6 +311,7 @@ body {
 
 .location-list__label {
   flex: 1;
+  min-width: 0;
   font-size: 13px;
   white-space: nowrap;
   overflow: hidden;
@@ -235,6 +334,12 @@ body {
 .location-list__remove:hover {
   background: var(--color-danger-bg);
   color: var(--color-danger);
+}
+
+.stop-endpoints {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .mode-toggle {
@@ -285,6 +390,29 @@ body {
   background: var(--color-primary-hover);
 }
 
+.btn--secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  padding: 9px 14px;
+  background: var(--color-surface);
+  color: var(--color-primary);
+  border: 1px solid var(--color-border);
+  text-decoration: none;
+}
+
+.btn--secondary:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  background: var(--color-primary-bg);
+}
+
+.route-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
 .btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -298,10 +426,65 @@ body {
 
 .route-summary {
   display: flex;
-  gap: 16px;
+  flex-direction: column;
+  gap: 12px;
   padding: 14px;
   background: var(--color-primary-bg);
   border-radius: var(--radius-md);
+}
+
+.route-summary__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.route-summary__title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.route-summary__badge {
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 3px 9px;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  cursor: help;
+}
+
+.route-summary__badge--optimal {
+  color: var(--color-success);
+  background: var(--color-success-bg);
+}
+
+.route-summary__stats {
+  display: flex;
+  gap: 24px;
+}
+
+.route-summary__savings {
+  margin: 0;
+  padding-top: 10px;
+  border-top: 1px solid rgba(37, 99, 235, 0.15);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.route-summary__savings strong {
+  color: var(--color-success);
+}
+
+.route-summary__savings--neutral {
+  color: var(--color-text-muted);
+}
+
+.route-summary__savings-detail {
+  display: block;
+  font-size: 12px;
+  color: var(--color-text-muted);
 }
 
 .route-summary__item {
@@ -365,4 +548,76 @@ body {
 
 .location-marker--optimized {
   background: var(--color-primary);
+}
+
+.location-marker--start {
+  background: var(--color-start);
+}
+
+.location-marker--end {
+  background: var(--color-end);
+}
+
+.map-legend {
+  position: absolute;
+  z-index: 1000;
+  bottom: 24px;
+  left: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 12px;
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  pointer-events: none;
+}
+
+.map-legend__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.map-legend__swatch {
+  width: 22px;
+  height: 0;
+  border-top: 4px solid #1d4ed8;
+}
+
+.map-legend__swatch--original {
+  border-top: 3px dashed #ea580c;
+}
+
+/* Phones and narrow tablets: map on top, controls scroll underneath. */
+@media (max-width: 768px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(240px, 42dvh) 1fr;
+    height: 100dvh;
+  }
+
+  .map-pane {
+    grid-row: 1;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .sidebar {
+    grid-row: 2;
+    min-height: 0;
+    padding: 16px;
+    gap: 16px;
+    border-right: none;
+  }
+
+  .sidebar__header h1 {
+    font-size: 19px;
+  }
+
+  .map-legend {
+    bottom: 20px;
+    left: 8px;
+    font-size: 11px;
+  }
 }
